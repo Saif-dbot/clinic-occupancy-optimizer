@@ -1,0 +1,124 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[french]{babel}
+\usepackage{lmodern}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\geometry{margin=2.4cm}
+
+\title{Roadmap Professionnel\\Projet 2: Optimisation des Rendez-vous et Reduction du No-Show}
+\author{Festival de Science - Equipe Sante}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section*{Vision Produit}
+Construire une plateforme sante professionnelle qui augmente le taux d'occupation des medecins,
+reduit les absences patients et ameliore le revenu journalier des centres de consultation.
+
+\section*{Definition OFS}
+\textbf{OFS} signifie \textbf{Objectifs Fonctionnels Specifiques}. Il s'agit des fonctions essentielles
+et mesurables qui transforment le besoin metier en produit exploitable en clinique.
+
+\section*{OFS Prioritaires}
+\begin{enumerate}[leftmargin=*]
+  \item Gerer des agendas multi-medecins et multi-sites (creneaux, pauses, conges, exceptions).
+  \item Permettre reservation, annulation et report de rendez-vous (patient et secretaire).
+  \item Envoyer des rappels automatiques multicanal (email, SMS, WhatsApp selon disponibilite).
+  \item Calculer un score de risque \textit{no-show} pour chaque rendez-vous.
+  \item Declencher des actions selon le score: confirmation renforcee, rappel prioritaire, acompte optionnel.
+  \item Gerer une liste d'attente intelligente pour reutiliser rapidement les creneaux liberes.
+  \item Activer un surbooking controle par specialite et plage horaire.
+  \item Exposer un tableau de bord temps reel (no-show, occupation, remplissage, revenu).
+  \item Gerer les roles et permissions (admin, secretaire, medecin, superviseur).
+  \item Assurer une tracabilite complete (journal d'audit des actions critiques).
+  \item Respecter RGPD: consentement, minimisation, retention, suppression et anonymisation.
+  \item Produire des rapports mensuels pour direction medicale et finance.
+\end{enumerate}
+
+\section*{Roadmap 12 Semaines}
+\begin{center}
+\begin{tabular}{|p{2.2cm}|p{2.4cm}|p{8.8cm}|}
+\hline
+\textbf{Phase} & \textbf{Periode} & \textbf{Resultat attendu} \\
+\hline
+Cadrage metier & S1-S2 & KPI cibles, parcours utilisateurs, schema de donnees, regles no-show initiales. \\
+\hline
+MVP operationnel & S3-S5 & Agenda, reservation, annulation, rappels de base, dashboard V1. \\
+\hline
+Intelligence no-show & S6-S8 & Modele de prediction, scoring en production, segmentation patient. \\
+\hline
+Optimisation avancee & S9-S10 & Liste d'attente dynamique, surbooking securise, tableau KPI V2. \\
+\hline
+Pilote terrain & S11 & Test en conditions reelles sur un site pilote, collecte d'impact business. \\
+\hline
+Industrialisation & S12 & Durcissement securite, supervision, documentation, plan multi-sites. \\
+\hline
+\end{tabular}
+\end{center}
+
+\section*{Livrables Concrets}
+\begin{itemize}[leftmargin=*]
+  \item \textbf{S1-S2:} cahier fonctionnel, matrice KPI, architecture cible, plan de donnees.
+  \item \textbf{S3-S5:} application web operationnelle, moteur de rendez-vous, notifications automatiques.
+  \item \textbf{S6-S8:} service ML no-show, pipeline d'entrainement, metriques de performance modele.
+  \item \textbf{S9-S10:} moteur d'optimisation de creneaux, simulation de gain, reporting management.
+  \item \textbf{S11-S12:} rapport pilote, checklist conformite, plan de deploiement progressif.
+\end{itemize}
+
+\section*{Technologies Recommandees}
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Frontend:} Next.js + TypeScript + Tailwind CSS.
+  \item \textbf{Backend API:} FastAPI (Python) ou NestJS (TypeScript).
+  \item \textbf{Base de donnees:} PostgreSQL.
+  \item \textbf{Cache et orchestration taches:} Redis + Celery (FastAPI) ou BullMQ (NestJS).
+  \item \textbf{Prediction no-show:} scikit-learn + XGBoost.
+  \item \textbf{Notifications:} Twilio (SMS/WhatsApp) + SendGrid (email).
+  \item \textbf{Auth et IAM:} Keycloak (open source) ou Auth0 (SaaS).
+  \item \textbf{Observabilite:} Prometheus + Grafana + Sentry.
+  \item \textbf{BI et reporting:} Metabase.
+  \item \textbf{DevOps:} Docker + GitHub Actions + Nginx.
+\end{itemize}
+
+\section*{Outils Open Source (OSS) Conseilles}
+\begin{itemize}[leftmargin=*]
+  \item OpenEMR: reference de flux cliniques et gestion de rendez-vous. \\
+  \url{https://github.com/openemr/openemr}
+  \item Medplum: composants FHIR modernes pour interop sante. \\
+  \url{https://github.com/medplum/medplum}
+  \item HAPI FHIR: serveur et bibliotheques FHIR robustes. \\
+  \url{https://github.com/hapifhir/hapi-fhir}
+  \item OHDSI Atlas: analytics clinique et cohortes. \\
+  \url{https://github.com/OHDSI/Atlas}
+  \item Keycloak: gestion des identites et des roles. \\
+  \url{https://github.com/keycloak/keycloak}
+\end{itemize}
+
+\section*{KPI Cibles du Pilote}
+\begin{enumerate}[leftmargin=*]
+  \item Reduction du no-show: au moins 20\%.
+  \item Augmentation du taux d'occupation medecin: au moins 10\%.
+  \item Reduction du temps moyen de prise de rendez-vous: au moins 30\%.
+  \item Reaffectation des creneaux annules: au moins 25\%.
+  \item ROI pilote positif avant la fin du 3eme mois post-demarrage.
+\end{enumerate}
+
+\section*{Equipe Minimale}
+\begin{itemize}[leftmargin=*]
+  \item 1 Product Owner (sante).
+  \item 1 Developpeur frontend.
+  \item 1 Developpeur backend.
+  \item 1 Data/ML engineer (part-time possible).
+  \item 1 QA/Ops (part-time possible).
+\end{itemize}
+
+\section*{Conclusion}
+Cette roadmap permet de presenter un projet credible pour un jury professionnel:
+vision business claire, execution realiste en 12 semaines, stack technologique moderne,
+et OFS mesurables pour prouver la valeur terrain.
+
+\end{document}

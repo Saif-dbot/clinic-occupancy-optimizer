@@ -1,0 +1,1 @@
+"""MediPlan backend package."""

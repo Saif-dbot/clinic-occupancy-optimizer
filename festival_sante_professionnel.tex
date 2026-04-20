@@ -1,0 +1,152 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[french]{babel}
+\usepackage{lmodern}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\geometry{margin=2.4cm}
+
+\title{Festival de Science\\Idees Sante Professionnelles}
+\author{Equipe Projet}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section*{Objectif}
+Presenter des idees sante a orientation professionnelle, avec une logique produit,
+des indicateurs business et des bases open source exploitables.
+
+\section*{Idee 1: Telesurveillance post-operatoire avec triage intelligent}
+\textbf{Client cible:} cliniques chirurgicales et hopitaux prives.\\
+\textbf{Probleme business:} les readmissions a 7-30 jours augmentent les couts et la charge soignante.\\
+\textbf{Proposition de valeur:} suivi patient a domicile + priorisation automatique des cas urgents.
+
+\textbf{Fonctionnement:}
+\begin{itemize}[leftmargin=*]
+  \item Le patient remplit un check-in quotidien (douleur, temperature, symptomes).
+  \item Le systeme calcule un score de risque et genere des alertes.
+  \item Les infirmiers visualisent une file priorisee et escaladent vers le medecin.
+\end{itemize}
+
+\textbf{Bases open source:}
+\begin{itemize}[leftmargin=*]
+  \item \url{https://github.com/medplum/medplum}
+  \item \url{https://github.com/hapifhir/hapi-fhir}
+\end{itemize}
+
+\textbf{KPI de valeur:} baisse du taux de readmission, temps moyen de traitement d'alerte, adherence patient.
+
+\section*{Idee 2: Optimisation des rendez-vous et reduction du no-show}
+\textbf{Client cible:} cabinets de groupe, centres de consultation, reseaux multi-sites.\\
+\textbf{Probleme business:} pertes de revenu dues aux absences et a la mauvaise occupation des creneaux.\\
+\textbf{Proposition de valeur:} prediction du no-show + rappels intelligents + liste d'attente dynamique.
+
+\textbf{Fonctionnement:}
+\begin{itemize}[leftmargin=*]
+  \item Score de risque d'absence par patient, specialite, horaire et saisonnalite.
+  \item Rappels automatiques multicanal (email, SMS, push).
+  \item Proposition de remplissage automatique via liste d'attente.
+\end{itemize}
+
+\textbf{Bases open source:}
+\begin{itemize}[leftmargin=*]
+  \item \url{https://github.com/openemr/openemr}
+  \item \url{https://github.com/OHDSI/Atlas}
+\end{itemize}
+
+\textbf{KPI de valeur:} reduction no-show, taux d'occupation, hausse du chiffre d'affaires journalier.
+
+\section*{Idee 3: Suivi des plaies chroniques avec vision IA}
+\textbf{Client cible:} services diabete, soins a domicile, structures de long sejour.\\
+\textbf{Probleme business:} evaluation manuelle heterogene, suivi difficile de la cicatrisation.\\
+\textbf{Proposition de valeur:} mesure objective de la progression des plaies et alertes precoces.
+
+\textbf{Fonctionnement:}
+\begin{itemize}[leftmargin=*]
+  \item Capture photo standardisee (distance, angle, eclairage).
+  \item Segmentation de la zone et calcul automatique de surface.
+  \item Courbe d'evolution et signalement des stagnations.
+\end{itemize}
+
+\textbf{Bases open source:}
+\begin{itemize}[leftmargin=*]
+  \item \url{https://github.com/Project-MONAI/MONAI}
+  \item \url{https://github.com/medplum/medplum}
+\end{itemize}
+
+\textbf{KPI de valeur:} temps d'evaluation par cas, detection precoce des complications, precision de segmentation.
+
+\section*{Idee 4: Hub d'interoperabilite FHIR pour cliniques}
+\textbf{Client cible:} groupes de cliniques avec systemes d'information heterogenes.\\
+\textbf{Probleme business:} silos de donnees, integrations longues et reporting lent.\\
+\textbf{Proposition de valeur:} couche unique de donnees cliniques, API normalisees, audit complet.
+
+\textbf{Fonctionnement:}
+\begin{itemize}[leftmargin=*]
+  \item Connecteurs vers dossiers patients, labo et facturation.
+  \item Mapping vers ressources FHIR et synchronisation evenementielle.
+  \item Journal d'audit centralise pour conformite.
+\end{itemize}
+
+\textbf{Bases open source:}
+\begin{itemize}[leftmargin=*]
+  \item \url{https://github.com/hapifhir/hapi-fhir}
+  \item \url{https://github.com/medplum/medplum}
+\end{itemize}
+
+\textbf{KPI de valeur:} delai d'integration d'un nouveau systeme, qualite de synchronisation, rapidite de reporting.
+
+\section*{Idee 5: Assistant clinique diabete pour aide a la decision}
+\textbf{Client cible:} endocrinologues et centres specialistes diabete.\\
+\textbf{Probleme business:} volume de donnees eleve et decisions de suivi non uniformes.\\
+\textbf{Proposition de valeur:} synthese automatique des donnees et recommandations justifiees, validees par medecin.
+
+\textbf{Fonctionnement:}
+\begin{itemize}[leftmargin=*]
+  \item Ingestion des mesures glucose, insuline et habitudes de vie.
+  \item Detection de patterns (hypo/hyper recurrentes, variabilite).
+  \item Rapport de consultation avec recommandations proposees et tracees.
+\end{itemize}
+
+\textbf{Bases open source:}
+\begin{itemize}[leftmargin=*]
+  \item \url{https://github.com/openaps/oref0}
+  \item \url{https://github.com/medplum/medplum}
+\end{itemize}
+
+\textbf{KPI de valeur:} evolution du Time In Range, baisse des hypoglycemies, temps de preparation consultation.
+
+\section*{Architecture technique recommandee (commune)}
+\begin{itemize}[leftmargin=*]
+  \item Frontend: portail soignant + application patient.
+  \item Backend: API REST/FHIR, service de regles, service d'alertes.
+  \item Data: base transactionnelle + entrepot analytique pour KPI.
+  \item Securite: chiffrement, journalisation, gestion des consentements.
+\end{itemize}
+
+\section*{Roadmap 90 jours (version festival vers version professionnelle)}
+\begin{enumerate}[leftmargin=*]
+  \item \textbf{Jours 1-20:} cadrage metier, specification fonctionnelle, maquettes, architecture.
+  \item \textbf{Jours 21-50:} developpement MVP, connecteurs de donnees, dashboard principal.
+  \item \textbf{Jours 51-75:} moteur de priorisation, alertes, mesures KPI, tests securite.
+  \item \textbf{Jours 76-90:} pilote terrain limite, collecte resultats, dossier commercial.
+\end{enumerate}
+
+\section*{Conformite et risque}
+\begin{itemize}[leftmargin=*]
+  \item RGPD: base legale, minimisation des donnees, droit d'acces et suppression.
+  \item Securite: controle d'acces fort, chiffrement en transit et au repos.
+  \item Reglementaire: evaluer le statut dispositif medical logiciel selon le pays cible.
+\end{itemize}
+
+\section*{Conclusion}
+Pour une execution rapide et un potentiel economique fort, l'\textbf{Idee 2}
+(optimisation rendez-vous/no-show) est souvent la plus accessible.
+Pour un impact clinique et une differentiation technique plus forte,
+l'\textbf{Idee 1} ou l'\textbf{Idee 3} sont les options les plus prometteuses.
+
+\end{document}
