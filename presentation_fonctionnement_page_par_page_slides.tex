@@ -1,0 +1,179 @@
+\documentclass[10pt,aspectratio=169]{beamer}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[french]{babel}
+\usepackage{lmodern}
+\usepackage{hyperref}
+
+\usetheme{Madrid}
+\usecolortheme{default}
+
+\title{MediPlan}
+\subtitle{Fonctionnement et plan de modification page par page}
+\author{Equipe Projet}
+\date{\today}
+
+\begin{document}
+
+\begin{frame}
+  \titlepage
+\end{frame}
+
+\begin{frame}{Objectif}
+  \begin{itemize}
+    \item Presenter clairement comment l application fonctionne aujourd hui.
+    \item Expliquer la structure technique frontend et backend.
+    \item Donner un plan de migration page par page vers l API FastAPI.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Vision rapide du projet}
+  MediPlan est une application de gestion des rendez-vous medicaux orientee reduction du no-show.
+  \vspace{0.4cm}
+  \begin{itemize}
+    \item Frontend Next.js (UI et navigation)
+    \item Backend FastAPI (logique metier et endpoints OFS)
+    \item Donnees mock cote frontend pour la demo actuelle
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Probleme metier adresse}
+  \begin{itemize}
+    \item Absences patients (no-show) qui degradent le taux d occupation.
+    \item Creneaux annules non reaffectes a temps.
+    \item Charge forte pour secretariat et pilotage difficile des KPI.
+  \end{itemize}
+  \vspace{0.3cm}
+  \textbf{Cible:} ameliorer occupation, reaffectation et qualite operationnelle.
+\end{frame}
+
+\begin{frame}{Architecture actuelle}
+  \textbf{Frontend}
+  \begin{itemize}
+    \item Point d entree: \texttt{app/layout.tsx}
+    \item Login: \texttt{app/page.tsx}
+    \item Routes protegees: \texttt{app/(app)/layout.tsx}
+    \item Shell navigation: \texttt{components/layout/app-shell.tsx}
+    \item Donnees demo: \texttt{lib/mock-api.ts}, \texttt{lib/mock-data.ts}
+  \end{itemize}
+  \vspace{0.2cm}
+  \textbf{Backend}
+  \begin{itemize}
+    \item API: \texttt{backend/app/main.py}
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Flux fonctionnel de bout en bout}
+  \begin{enumerate}
+    \item Utilisateur sur la page de connexion.
+    \item Validation du compte demo via contexte applicatif.
+    \item Redirection vers \texttt{/dashboard} apres authentification.
+    \item Verification d acces via layout protege.
+    \item Chargement des donnees via \texttt{mock-api.ts} (etat actuel).
+    \item Navigation et permissions selon le role actif.
+  \end{enumerate}
+\end{frame}
+
+\begin{frame}{Pages fonctionnelles existantes}
+  \begin{itemize}
+    \item Login: \texttt{app/page.tsx}
+    \item Dashboard: \texttt{app/(app)/dashboard/page.tsx}
+    \item Rendez-vous: \texttt{app/(app)/appointments/page.tsx}
+    \item Agenda: \texttt{app/(app)/agenda/page.tsx}
+    \item Waitlist: \texttt{app/(app)/waitlist/page.tsx}
+    \item Risk center: \texttt{app/(app)/risk-center/page.tsx}
+    \item KPI: \texttt{app/(app)/kpi/page.tsx}
+    \item Audit: \texttt{app/(app)/audit/page.tsx}
+    \item Settings: \texttt{app/(app)/settings/page.tsx}
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Endpoints OFS deja disponibles}
+  \begin{itemize}
+    \item \texttt{POST /appointments}
+    \item \texttt{PATCH /appointments/\{id\}/cancel}
+    \item \texttt{POST /waitlist/\{siteId\}/enqueue}
+    \item \texttt{GET /dashboard/kpi}
+    \item \texttt{POST /risk-score/recompute/\{appointmentId\}}
+  \end{itemize}
+  \vspace{0.3cm}
+  \textbf{Objectif de la prochaine phase:} brancher progressivement les ecrans sur ces endpoints.
+\end{frame}
+
+\begin{frame}{Plan de migration - Etape A (fondations)}
+  \begin{enumerate}
+    \item Creer un client API unique (\texttt{lib/api-client.ts}).
+    \item Ajouter \texttt{NEXT\_PUBLIC\_API\_BASE\_URL}.
+    \item Definir un fallback mock en dev si backend indisponible.
+  \end{enumerate}
+\end{frame}
+
+\begin{frame}{Plan page par page - Etape B (1/2)}
+  \textbf{1. Login}
+  \begin{itemize}
+    \item Conserver login demo, preparer auth reelle.
+  \end{itemize}
+  \textbf{2. Dashboard}
+  \begin{itemize}
+    \item Connecter KPI et alertes sur \texttt{GET /dashboard/kpi}.
+  \end{itemize}
+  \textbf{3. Rendez-vous}
+  \begin{itemize}
+    \item Connecter creation, annulation, confirmation via backend.
+  \end{itemize}
+  \textbf{4. Agenda}
+  \begin{itemize}
+    \item Connecter planning slots + appointments.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Plan page par page - Etape B (2/2)}
+  \textbf{5. Waitlist}
+  \begin{itemize}
+    \item Connecter offre, acceptation, refus.
+  \end{itemize}
+  \textbf{6. Risk center}
+  \begin{itemize}
+    \item Connecter recompute no-show et actions de rappels.
+  \end{itemize}
+  \textbf{7. KPI, Audit, Settings}
+  \begin{itemize}
+    \item KPI backend, audit logs backend, sauvegarde settings backend.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Criteres de validation pour chaque page}
+  \begin{enumerate}
+    \item UI identique ou meilleure.
+    \item Donnees backend en priorite.
+    \item Fallback mock en mode dev si necessaire.
+    \item Gestion propre des erreurs reseau (toast + etat vide).
+    \item Roles et permissions respectes.
+  \end{enumerate}
+\end{frame}
+
+\begin{frame}{Avancement et prochaine action}
+  \textbf{Deja fait:}
+  \begin{itemize}
+    \item Redirection auto vers dashboard si utilisateur deja connecte (page login).
+  \end{itemize}
+  \vspace{0.3cm}
+  \textbf{Prochaine action immediate:}
+  \begin{enumerate}
+    \item Connecter la page Dashboard au endpoint \texttt{GET /dashboard/kpi}.
+    \item Adapter les donnees API au format attendu par les composants graphiques.
+  \end{enumerate}
+\end{frame}
+
+\begin{frame}{Conclusion}
+  \begin{itemize}
+    \item Le socle technique est en place.
+    \item Le parcours de migration est clair et incremental.
+    \item La methode page par page limite les risques de regression.
+  \end{itemize}
+  \vspace{0.4cm}
+  \centering
+  \Large Questions ?
+\end{frame}
+
+\end{document}

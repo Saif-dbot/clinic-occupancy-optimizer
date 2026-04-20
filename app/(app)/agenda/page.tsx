@@ -1,11 +1,13 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useMemo, useState, useCallback } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { format, addDays, startOfWeek, eachDayOfInterval, isSameDay, isToday } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   Select,
@@ -45,11 +47,14 @@ import {
   X,
   Plus,
   Filter,
+  Stethoscope,
+  CalendarPlus,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { Label } from '@/components/ui/label'
 import { FieldGroup, Field } from '@/components/ui/field'
+import { Textarea } from '@/components/ui/textarea'
 
 const timeSlots = [
   '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
@@ -57,7 +62,9 @@ const timeSlots = [
 ]
 
 export default function AgendaPage() {
-  const { currentRole } = useApp()
+  const { currentRole, currentUser } = useApp()
+  const searchParams = useSearchParams()
+  const isClient = currentRole === 'client'
   const canManageBookings = currentRole === 'admin' || currentRole === 'secretaire'
   const [view, setView] = useState<'day' | 'week'>('week')
   const [selectedDate, setSelectedDate] = useState(new Date())
@@ -72,12 +79,32 @@ export default function AgendaPage() {
   const [selectedPatient, setSelectedPatient] = useState<string>('')
   const [bookingLoading, setBookingLoading] = useState(false)
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null)
+  const [symptoms, setSymptoms] = useState('')
+  const [quickDate, setQuickDate] = useState(format(new Date(), 'yyyy-MM-dd'))
+  const [quickPractitionerId, setQuickPractitionerId] = useState('all')
+  const [quickSlotId, setQuickSlotId] = useState('')
+  const [quickBookingLoading, setQuickBookingLoading] = useState(false)
 
-  const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 })
-  const weekDays = eachDayOfInterval({
-    start: weekStart,
-    end: addDays(weekStart, 6),
-  }).filter(d => d.getDay() !== 0 && d.getDay() !== 6) // Exclude weekends
+  const currentPatient = useMemo(() => {
+    if (!isClient || !currentUser) return null
+
+    const normalizedUserName = currentUser.name.trim().toLowerCase()
+    return (
+      mockPatients.find(
+        p => `${p.firstName} ${p.lastName}`.trim().toLowerCase() === normalizedUserName
+      ) || null
+    )
+  }, [isClient, currentUser])
+
+  const weekStart = useMemo(() => startOfWeek(selectedDate, { weekStartsOn: 1 }), [selectedDate])
+  const weekDays = useMemo(
+    () =>
+      eachDayOfInterval({
+        start: weekStart,
+        end: addDays(weekStart, 6),
+      }).filter(d => d.getDay() !== 0 && d.getDay() !== 6),
+    [weekStart]
+  )
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -110,19 +137,76 @@ export default function AgendaPage() {
         filteredSlots = filteredSlots.filter(s => s.practitionerId === selectedPractitioner)
       }
 
+      if (isClient && currentPatient) {
+        filteredAppointments = filteredAppointments.filter(a => a.patientId === currentPatient.id)
+      }
+
       setAppointments(filteredAppointments)
       setSlots(filteredSlots)
     } catch (error) {
       console.error('Error loading agenda data:', error)
-      toast.error('Erreur lors du chargement de l\'agenda')
+      toast.error('Erreur lors du chargement des rendez-vous')
     } finally {
       setLoading(false)
     }
-  }, [selectedDate, view, selectedSite, selectedPractitioner, weekDays])
+  }, [selectedDate, view, selectedSite, selectedPractitioner, weekDays, isClient, currentPatient])
 
   useEffect(() => {
     loadData()
   }, [loadData])
+
+  useEffect(() => {
+    if (selectedPractitioner === 'all') return
+
+    const practitionerStillVisible = practitioners.some(
+      p => p.id === selectedPractitioner && (selectedSite === 'all' || p.siteId === selectedSite)
+    )
+    if (!practitionerStillVisible) {
+      setSelectedPractitioner('all')
+    }
+  }, [selectedPractitioner, practitioners, selectedSite])
+
+  useEffect(() => {
+    if (!isClient) return
+
+    setView('day')
+    if (currentPatient) {
+      setSelectedPatient(currentPatient.id)
+    }
+  }, [isClient, currentPatient])
+
+  useEffect(() => {
+    const practitionerFromQuery = searchParams.get('praticien')
+    if (!practitionerFromQuery) return
+
+    const exists = practitioners.some(p => p.id === practitionerFromQuery)
+    if (!exists) return
+
+    setSelectedPractitioner(practitionerFromQuery)
+    if (isClient) {
+      setQuickPractitionerId(practitionerFromQuery)
+    }
+  }, [searchParams, practitioners, isClient])
+
+  useEffect(() => {
+    if (!isClient) return
+    setQuickDate(format(selectedDate, 'yyyy-MM-dd'))
+  }, [isClient, selectedDate])
+
+  useEffect(() => {
+    setQuickSlotId('')
+  }, [quickDate, quickPractitionerId, selectedSite])
+
+  useEffect(() => {
+    if (quickPractitionerId === 'all') return
+
+    const practitionerStillVisible = practitioners.some(
+      p => p.id === quickPractitionerId && (selectedSite === 'all' || p.siteId === selectedSite)
+    )
+    if (!practitionerStillVisible) {
+      setQuickPractitionerId('all')
+    }
+  }, [quickPractitionerId, practitioners, selectedSite])
 
   const getPatientName = (patientId: string) => {
     const patient = mockPatients.find(p => p.id === patientId)
@@ -147,12 +231,18 @@ export default function AgendaPage() {
   }
 
   const handleBookSlot = async () => {
-    if (!bookingSlot || !selectedPatient) return
+    if (!bookingSlot) return
+
+    const patientId = isClient ? currentPatient?.id : selectedPatient
+    if (!patientId) {
+      toast.error('Patient non identifié pour la réservation')
+      return
+    }
     
     setBookingLoading(true)
     try {
       await createAppointment({
-        patientId: selectedPatient,
+        patientId,
         practitionerId: bookingSlot.practitionerId,
         siteId: bookingSlot.siteId,
         date: bookingSlot.date,
@@ -160,9 +250,11 @@ export default function AgendaPage() {
         endTime: bookingSlot.endTime,
         status: 'scheduled',
       })
-      toast.success('Rendez-vous créé avec succès')
+      toast.success(isClient ? 'Votre rendez-vous a été réservé' : 'Rendez-vous créé avec succès')
       setBookingSlot(null)
-      setSelectedPatient('')
+      if (!isClient) {
+        setSelectedPatient('')
+      }
       loadData()
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Erreur lors de la création')
@@ -171,12 +263,61 @@ export default function AgendaPage() {
     }
   }
 
+  const handleQuickDateChange = (nextDate: string) => {
+    setQuickDate(nextDate)
+    const parsed = new Date(`${nextDate}T12:00:00`)
+    if (!Number.isNaN(parsed.getTime())) {
+      setSelectedDate(parsed)
+    }
+  }
+
+  const handleQuickBooking = async () => {
+    if (!isClient) return
+
+    if (!currentPatient) {
+      toast.error('Compte patient non identifié')
+      return
+    }
+
+    if (!selectedQuickSlot) {
+      toast.error('Sélectionnez un créneau disponible')
+      return
+    }
+
+    setQuickBookingLoading(true)
+    try {
+      await createAppointment({
+        patientId: currentPatient.id,
+        practitionerId: selectedQuickSlot.practitionerId,
+        siteId: selectedQuickSlot.siteId,
+        date: selectedQuickSlot.date,
+        startTime: selectedQuickSlot.startTime,
+        endTime: selectedQuickSlot.endTime,
+        status: 'scheduled',
+        notes: symptoms.trim() ? `Symptômes: ${symptoms.trim()}` : undefined,
+      })
+      toast.success('Votre rendez-vous a été réservé')
+      setSymptoms('')
+      setQuickSlotId('')
+      loadData()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Erreur lors de la réservation')
+    } finally {
+      setQuickBookingLoading(false)
+    }
+  }
+
   const handleCancelAppointment = async () => {
     if (!selectedAppointment) return
+
+    if (isClient && currentPatient && selectedAppointment.patientId !== currentPatient.id) {
+      toast.error('Vous ne pouvez annuler que vos propres rendez-vous')
+      return
+    }
     
     try {
       await cancelAppointment(selectedAppointment.id)
-      toast.success('Rendez-vous annulé')
+      toast.success(isClient ? 'Votre rendez-vous a été annulé' : 'Rendez-vous annulé')
       setSelectedAppointment(null)
       loadData()
     } catch (error) {
@@ -202,6 +343,52 @@ export default function AgendaPage() {
   const displayPractitioners = selectedPractitioner === 'all'
     ? filteredPractitioners.slice(0, 4)
     : filteredPractitioners.filter(p => p.id === selectedPractitioner)
+
+  const quickAvailableSlots = useMemo(() => {
+    if (!isClient) return []
+
+    return slots
+      .filter(slot => slot.isAvailable)
+      .filter(slot => slot.date === quickDate)
+      .filter(slot => selectedSite === 'all' || slot.siteId === selectedSite)
+      .filter(slot => quickPractitionerId === 'all' || slot.practitionerId === quickPractitionerId)
+      .sort((a, b) => a.startTime.localeCompare(b.startTime))
+  }, [slots, isClient, quickDate, selectedSite, quickPractitionerId])
+
+  const quickAvailablePractitioners = useMemo(() => {
+    if (!isClient) return []
+
+    return filteredPractitioners
+      .map(practitioner => {
+        const slotsForPractitioner = quickAvailableSlots.filter(s => s.practitionerId === practitioner.id)
+        return {
+          practitioner,
+          count: slotsForPractitioner.length,
+          firstSlot: slotsForPractitioner[0],
+        }
+      })
+      .filter(item => item.count > 0)
+      .sort((a, b) => a.practitioner.name.localeCompare(b.practitioner.name))
+  }, [filteredPractitioners, quickAvailableSlots, isClient])
+
+  const selectedQuickSlot = useMemo(
+    () => quickAvailableSlots.find(slot => slot.id === quickSlotId) || null,
+    [quickAvailableSlots, quickSlotId]
+  )
+
+  const myUpcomingAppointments = useMemo(() => {
+    if (!isClient) return []
+
+    const now = Date.now()
+    return appointments
+      .filter(a => a.status === 'scheduled' || a.status === 'confirmed')
+      .filter(a => new Date(`${a.date}T${a.startTime}:00`).getTime() >= now)
+      .sort(
+        (a, b) =>
+          new Date(`${a.date}T${a.startTime}:00`).getTime() -
+          new Date(`${b.date}T${b.startTime}:00`).getTime()
+      )
+  }, [appointments, isClient])
 
   if (loading) {
     return (
@@ -252,7 +439,7 @@ export default function AgendaPage() {
           <Tabs value={view} onValueChange={(v) => setView(v as 'day' | 'week')}>
             <TabsList>
               <TabsTrigger value="day">Jour</TabsTrigger>
-              <TabsTrigger value="week">Semaine</TabsTrigger>
+              {!isClient && <TabsTrigger value="week">Semaine</TabsTrigger>}
             </TabsList>
           </Tabs>
 
@@ -285,6 +472,153 @@ export default function AgendaPage() {
         </div>
       </div>
 
+      {isClient && (
+        <div className="grid gap-4 lg:grid-cols-2">
+          <Card className="border-primary/30 bg-primary/5">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <CalendarPlus className="w-5 h-5 text-primary" />
+                Prendre un rendez-vous
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Choisissez un médecin disponible puis décrivez vos symptômes.
+              </p>
+              <FieldGroup>
+                <Field>
+                  <Label>Date souhaitée</Label>
+                  <Input
+                    type="date"
+                    value={quickDate}
+                    onChange={(e) => handleQuickDateChange(e.target.value)}
+                  />
+                </Field>
+
+                <Field>
+                  <Label>Médecin</Label>
+                  <Select
+                    value={quickPractitionerId}
+                    onValueChange={(value) => {
+                      setQuickPractitionerId(value)
+                      setSelectedPractitioner(value)
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choisir un médecin" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Tous les médecins</SelectItem>
+                      {filteredPractitioners.map(practitioner => (
+                        <SelectItem key={practitioner.id} value={practitioner.id}>
+                          {practitioner.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </Field>
+
+                <Field>
+                  <Label>Créneau disponible</Label>
+                  <Select value={quickSlotId} onValueChange={setQuickSlotId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choisir un créneau" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {quickAvailableSlots.map(slot => (
+                        <SelectItem key={slot.id} value={slot.id}>
+                          {slot.startTime} - {slot.endTime} · {getPractitionerName(slot.practitionerId)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </Field>
+
+                <Field>
+                  <Label>Symptômes</Label>
+                  <Textarea
+                    rows={4}
+                    placeholder="Ex: fièvre depuis 2 jours, fatigue, toux sèche..."
+                    value={symptoms}
+                    onChange={(e) => setSymptoms(e.target.value)}
+                  />
+                </Field>
+              </FieldGroup>
+
+              <Button
+                className="w-full"
+                onClick={handleQuickBooking}
+                disabled={quickBookingLoading || !selectedQuickSlot || !currentPatient}
+              >
+                {quickBookingLoading ? 'Réservation...' : 'Confirmer mon rendez-vous'}
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Stethoscope className="w-5 h-5 text-primary" />
+                Médecins disponibles
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {quickAvailablePractitioners.length > 0 ? (
+                <div className="space-y-2">
+                  {quickAvailablePractitioners.map(item => (
+                    <div key={item.practitioner.id} className="rounded-md border bg-background p-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="font-medium text-sm">{item.practitioner.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {item.count} créneau(x) · premier à {item.firstSlot?.startTime}
+                          </p>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setQuickPractitionerId(item.practitioner.id)
+                            setSelectedPractitioner(item.practitioner.id)
+                            if (item.firstSlot) {
+                              setQuickSlotId(item.firstSlot.id)
+                            }
+                          }}
+                        >
+                          Choisir
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Aucun médecin disponible pour cette date.
+                </p>
+              )}
+
+              <div className="border-t pt-3">
+                <p className="text-sm font-medium mb-2">Mes prochains rendez-vous</p>
+                {myUpcomingAppointments.length > 0 ? (
+                  <div className="space-y-2">
+                    {myUpcomingAppointments.slice(0, 3).map(appt => (
+                      <div key={appt.id} className="rounded-md border bg-background p-2 text-sm">
+                        <p className="font-medium">
+                          {format(new Date(appt.date), 'EEEE d MMMM', { locale: fr })} à {appt.startTime}
+                        </p>
+                        <p className="text-muted-foreground">{getPractitionerName(appt.practitionerId)}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Aucun rendez-vous planifié pour le moment.</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {/* Calendar grid */}
       <Card>
         <CardContent className="p-0">
@@ -298,14 +632,20 @@ export default function AgendaPage() {
                   <Clock className="w-4 h-4 text-muted-foreground" />
                 </div>
                 {view === 'day' ? (
-                  displayPractitioners.map(p => (
-                    <div key={p.id} className="p-3 text-center border-r border-border bg-muted/50">
-                      <p className="font-medium text-sm truncate">{p.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {sites.find(s => s.id === p.siteId)?.name}
-                      </p>
+                  displayPractitioners.length > 0 ? (
+                    displayPractitioners.map(p => (
+                      <div key={p.id} className="p-3 text-center border-r border-border bg-muted/50">
+                        <p className="font-medium text-sm truncate">{p.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {sites.find(s => s.id === p.siteId)?.name}
+                        </p>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="p-3 text-sm text-muted-foreground border-r border-border bg-muted/50">
+                      Aucun praticien pour ce filtre
                     </div>
-                  ))
+                  )
                 ) : (
                   weekDays.map(day => (
                     <div
@@ -373,13 +713,17 @@ export default function AgendaPage() {
                                  appointment.status === 'no_show' ? 'No-show' : 'Terminé'}
                               </Badge>
                             </button>
-                          ) : slot?.isAvailable && canManageBookings ? (
+                          ) : slot?.isAvailable && (canManageBookings || (isClient && !!currentPatient)) ? (
                             <button
                               onClick={() => setBookingSlot(slot)}
                               className="w-full h-full flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-md transition-colors"
                             >
                               <Plus className="w-4 h-4" />
                             </button>
+                          ) : isClient && slot && !slot.isAvailable ? (
+                            <div className="w-full h-full flex items-center justify-center text-[10px] text-muted-foreground">
+                              Indispo
+                            </div>
                           ) : null}
                         </div>
                       )
@@ -448,30 +792,42 @@ export default function AgendaPage() {
             </DialogDescription>
           </DialogHeader>
           
-          <FieldGroup>
-            <Field>
-              <Label>Patient</Label>
-              <Select value={selectedPatient} onValueChange={setSelectedPatient}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Sélectionner un patient" />
-                </SelectTrigger>
-                <SelectContent>
-                  {mockPatients.map(patient => (
-                    <SelectItem key={patient.id} value={patient.id}>
-                      {patient.firstName} {patient.lastName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
-          </FieldGroup>
+          {isClient ? (
+            <div className="rounded-md border bg-secondary/30 p-3 text-sm">
+              <p className="text-muted-foreground">Patient</p>
+              <p className="font-medium">
+                {currentPatient ? `${currentPatient.firstName} ${currentPatient.lastName}` : 'Compte patient non lié'}
+              </p>
+            </div>
+          ) : (
+            <FieldGroup>
+              <Field>
+                <Label>Patient</Label>
+                <Select value={selectedPatient} onValueChange={setSelectedPatient}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sélectionner un patient" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {mockPatients.map(patient => (
+                      <SelectItem key={patient.id} value={patient.id}>
+                        {patient.firstName} {patient.lastName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+            </FieldGroup>
+          )}
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setBookingSlot(null)}>
               Annuler
             </Button>
-            <Button onClick={handleBookSlot} disabled={!selectedPatient || bookingLoading}>
-              {bookingLoading ? 'Création...' : 'Confirmer la réservation'}
+            <Button
+              onClick={handleBookSlot}
+              disabled={bookingLoading || (!isClient && !selectedPatient) || (isClient && !currentPatient)}
+            >
+              {bookingLoading ? 'Création...' : isClient ? 'Réserver ce créneau' : 'Confirmer la réservation'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -525,13 +881,19 @@ export default function AgendaPage() {
               </div>
 
               <div className="p-3 rounded-lg bg-secondary/50">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Score no-show</span>
-                  <RiskBadge
-                    score={selectedAppointment.noShowScore}
-                    factors={selectedAppointment.noShowFactors}
-                  />
-                </div>
+                {isClient ? (
+                  <p className="text-sm text-muted-foreground">
+                    Utilisez cet espace pour suivre, replanifier ou annuler vos rendez-vous à venir.
+                  </p>
+                ) : (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Score no-show</span>
+                    <RiskBadge
+                      score={selectedAppointment.noShowScore}
+                      factors={selectedAppointment.noShowFactors}
+                    />
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center gap-2">
@@ -543,18 +905,28 @@ export default function AgendaPage() {
                    selectedAppointment.status === 'no_show' ? 'No-show' : 'Terminé'}
                 </Badge>
               </div>
+
+              {selectedAppointment.notes && (
+                <div className="p-3 rounded-lg bg-muted/40">
+                  <p className="text-xs text-muted-foreground mb-1">Symptômes déclarés</p>
+                  <p className="text-sm">
+                    {selectedAppointment.notes.replace(/^Symptômes:\s*/i, '')}
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
           <DialogFooter>
-            {selectedAppointment?.status === 'scheduled' || selectedAppointment?.status === 'confirmed' ? (
+            {(selectedAppointment?.status === 'scheduled' || selectedAppointment?.status === 'confirmed') &&
+            (canManageBookings || (isClient && currentPatient?.id === selectedAppointment?.patientId)) ? (
               <>
                 <Button variant="outline" onClick={() => setSelectedAppointment(null)}>
                   Fermer
                 </Button>
                 <Button variant="destructive" onClick={handleCancelAppointment}>
                   <X className="w-4 h-4 mr-2" />
-                  Annuler le RDV
+                  {isClient ? 'Annuler mon RDV' : 'Annuler le RDV'}
                 </Button>
               </>
             ) : (

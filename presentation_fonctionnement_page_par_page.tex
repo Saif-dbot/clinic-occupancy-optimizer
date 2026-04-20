@@ -1,0 +1,177 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[french]{babel}
+\usepackage{lmodern}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\geometry{margin=2.4cm}
+
+\title{Presentation Technique\\MediPlan: Fonctionnement et Plan de Modification Page par Page}
+\author{Equipe Projet}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section*{1) Vision rapide}
+MediPlan est une application web de gestion des rendez-vous medicaux orientee reduction du no-show.
+
+Le projet est compose de:
+\begin{itemize}[leftmargin=*]
+  \item un frontend Next.js (interface utilisateur),
+  \item un backend FastAPI (API metier),
+  \item une couche de donnees mock cote frontend pour la demo actuelle.
+\end{itemize}
+
+\section*{2) Architecture actuelle}
+
+\subsection*{2.1 Frontend}
+\begin{itemize}[leftmargin=*]
+  \item Point d'entree global: \texttt{app/layout.tsx}
+  \item Page de connexion: \texttt{app/page.tsx}
+  \item Layout protege (app authentifiee): \texttt{app/(app)/layout.tsx}
+  \item Navigation et shell: \texttt{components/layout/app-shell.tsx}
+  \item Donnees de demo: \texttt{lib/mock-api.ts} + \texttt{lib/mock-data.ts}
+  \item Session/role: \texttt{contexts/app-context.tsx}
+\end{itemize}
+
+\subsection*{2.2 Backend}
+\begin{itemize}[leftmargin=*]
+  \item API FastAPI: \texttt{backend/app/main.py}
+  \item Endpoints OFS:
+  \begin{itemize}
+    \item \texttt{POST /appointments}
+    \item \texttt{PATCH /appointments/\{id\}/cancel}
+    \item \texttt{POST /waitlist/\{siteId\}/enqueue}
+    \item \texttt{GET /dashboard/kpi}
+    \item \texttt{POST /risk-score/recompute/\{appointmentId\}}
+  \end{itemize}
+\end{itemize}
+
+\section*{3) Flux fonctionnel (comment ca marche)}
+\begin{enumerate}[leftmargin=*]
+  \item L'utilisateur arrive sur la page de connexion (\texttt{app/page.tsx}).
+  \item Le contexte applicatif valide le login demo via \texttt{mockUsers} (\texttt{contexts/app-context.tsx}).
+  \item Une fois authentifie, l'utilisateur est redirige vers \texttt{/dashboard}.
+  \item Le layout \texttt{app/(app)/layout.tsx} protege les routes (si non authentifie, retour \texttt{/}).
+  \item Chaque page appelle aujourd'hui \texttt{lib/mock-api.ts} pour charger/modifier les donnees.
+  \item La navigation est pilotee par le role dans \texttt{components/layout/app-shell.tsx}.
+\end{enumerate}
+
+\section*{4) Pages et responsabilites}
+\begin{enumerate}[leftmargin=*]
+  \item \texttt{app/page.tsx}: connexion + quick login demo
+  \item \texttt{app/(app)/dashboard/page.tsx}: vue operationnelle globale
+  \item \texttt{app/(app)/appointments/page.tsx}: operations rendez-vous
+  \item \texttt{app/(app)/agenda/page.tsx}: planning visuel jour/semaine
+  \item \texttt{app/(app)/waitlist/page.tsx}: reaffectation des creneaux
+  \item \texttt{app/(app)/risk-center/page.tsx}: traitement des risques no-show
+  \item \texttt{app/(app)/kpi/page.tsx}: analyse KPI et tendances
+  \item \texttt{app/(app)/audit/page.tsx}: tracabilite des actions
+  \item \texttt{app/(app)/settings/page.tsx}: parametrage des regles/metriques
+\end{enumerate}
+
+\section*{5) Plan de modification page par page}
+Objectif global: migrer progressivement des mocks frontend vers le backend FastAPI, sans casser l'experience UI.
+
+\subsection*{Etape A - Fondations (avant les pages)}
+\begin{enumerate}[leftmargin=*]
+  \item Creer une couche client API unique (\texttt{lib/api-client.ts}).
+  \item Ajouter une variable d'environnement \texttt{NEXT\_PUBLIC\_API\_BASE\_URL}.
+  \item Definir un mode fallback mock pour la demo (si backend indisponible).
+\end{enumerate}
+
+\subsection*{Etape B - Modification page par page (ordre recommande)}
+
+\textbf{1. Page connexion (\texttt{app/page.tsx})}
+\begin{itemize}[leftmargin=*]
+  \item Etat actuel: auth 100\% mock.
+  \item A faire:
+  \begin{itemize}
+    \item garder login demo mais preparer branchement auth reelle ensuite,
+    \item gerer redirection si deja authentifie.
+  \end{itemize}
+\end{itemize}
+
+\textbf{2. Dashboard (\texttt{app/(app)/dashboard/page.tsx})}
+\begin{itemize}[leftmargin=*]
+  \item A faire:
+  \begin{itemize}
+    \item brancher KPI et alertes sur \texttt{GET /dashboard/kpi},
+    \item conserver chart et cartes existantes.
+  \end{itemize}
+\end{itemize}
+
+\textbf{3. Rendez-vous (\texttt{app/(app)/appointments/page.tsx})}
+\begin{itemize}[leftmargin=*]
+  \item A faire:
+  \begin{itemize}
+    \item brancher creation/annulation/confirmation via API backend,
+    \item conserver filtres et tableau UI.
+  \end{itemize}
+\end{itemize}
+
+\textbf{4. Agenda (\texttt{app/(app)/agenda/page.tsx})}
+\begin{itemize}[leftmargin=*]
+  \item A faire:
+  \begin{itemize}
+    \item brancher la vue planning sur les slots et appointments backend,
+    \item garder le mode jour/semaine et les filtres existants.
+  \end{itemize}
+\end{itemize}
+
+\textbf{5. Waitlist (\texttt{app/(app)/waitlist/page.tsx})}
+\begin{itemize}[leftmargin=*]
+  \item A faire:
+  \begin{itemize}
+    \item brancher envoi d'offre et acceptation/refus,
+    \item synchroniser les compteurs de cartes.
+  \end{itemize}
+\end{itemize}
+
+\textbf{6. Risk center (\texttt{app/(app)/risk-center/page.tsx})}
+\begin{itemize}[leftmargin=*]
+  \item A faire:
+  \begin{itemize}
+    \item brancher recompute no-show,
+    \item brancher actions de rappels et confirmations.
+  \end{itemize}
+\end{itemize}
+
+\textbf{7. KPI, Audit, Settings}
+\begin{itemize}[leftmargin=*]
+  \item KPI: brancher metriques backend avec alertes.
+  \item Audit: brancher flux backend d'audit logs.
+  \item Settings: brancher sauvegarde des regles et seuils.
+\end{itemize}
+
+\section*{6) Premiere modification deja demarree}
+La page de connexion a ete amelioree pour rediriger automatiquement vers \texttt{/dashboard} si l'utilisateur est deja authentifie.
+
+Fichier modifie:
+\begin{itemize}[leftmargin=*]
+  \item \texttt{app/page.tsx}
+\end{itemize}
+
+\section*{7) Criteres de validation par page}
+Pour chaque page migree:
+\begin{enumerate}[leftmargin=*]
+  \item UI identique ou meilleure.
+  \item Donnees chargees depuis backend en priorite.
+  \item Fallback mock optionnel en dev.
+  \item Gestion des erreurs reseau (toast + etat vide).
+  \item Role et permissions respectes.
+\end{enumerate}
+
+\section*{8) Prochaine action immediate}
+Commencer la page 2 (Dashboard):
+\begin{enumerate}[leftmargin=*]
+  \item creer un adaptateur de donnees dashboard,
+  \item connecter \texttt{GET /dashboard/kpi},
+  \item mapper le format API vers le format attendu par les composants KPI/graphs.
+\end{enumerate}
+
+\end{document}

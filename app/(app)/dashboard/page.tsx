@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
@@ -43,6 +44,7 @@ import {
 } from 'recharts'
 
 export default function DashboardPage() {
+  const router = useRouter()
   const { currentRole, currentUser } = useApp()
   const [loading, setLoading] = useState(true)
   const [todayAppointments, setTodayAppointments] = useState<Appointment[]>([])
@@ -52,6 +54,11 @@ export default function DashboardPage() {
   const [waitlist, setWaitlist] = useState<WaitlistEntry[]>([])
 
   useEffect(() => {
+    if (currentRole === 'client') {
+      router.replace('/agenda')
+      return
+    }
+
     const loadData = async () => {
       try {
         const today = format(new Date(), 'yyyy-MM-dd')
@@ -74,7 +81,15 @@ export default function DashboardPage() {
       }
     }
     loadData()
-  }, [])
+  }, [currentRole, router])
+
+  if (currentRole === 'client') {
+    return (
+      <div className="p-6">
+        <Skeleton className="h-10 w-full" />
+      </div>
+    )
+  }
 
   const getPatientName = (patientId: string) => {
     const patient = mockPatients.find(p => p.id === patientId)
@@ -135,7 +150,7 @@ export default function DashboardPage() {
           <Button variant="outline" size="sm" asChild>
             <Link href="/agenda">
               <Calendar className="w-4 h-4 mr-2" />
-              Voir l&apos;agenda
+              Voir les rendez-vous
             </Link>
           </Button>
         </div>

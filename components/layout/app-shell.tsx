@@ -14,12 +14,15 @@ import {
   BarChart3,
   Settings,
   FileText,
+  Stethoscope,
+  User,
   LogOut,
   ChevronLeft,
   ChevronRight,
   Bell,
   Search,
   Menu,
+  X,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -51,9 +54,12 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { href: '/dashboard', label: 'Tableau de bord', icon: LayoutDashboard, roles: ['admin', 'secretaire', 'medecin', 'client'] },
-  { href: '/agenda', label: 'Agenda', icon: Calendar, roles: ['admin', 'secretaire', 'medecin', 'client'] },
-  { href: '/appointments', label: 'Rendez-vous', icon: ListTodo, roles: ['admin', 'secretaire', 'medecin', 'client'] },
+  { href: '/dashboard', label: 'Tableau de bord', icon: LayoutDashboard, roles: ['admin', 'secretaire', 'medecin'] },
+  { href: '/agenda', label: 'Rendez-vous', icon: Calendar, roles: ['admin', 'secretaire', 'medecin', 'client'] },
+  { href: '/medecins', label: 'Médecins', icon: Stethoscope, roles: ['client'] },
+  { href: '/symptomes', label: 'Formulaire symptômes', icon: FileText, roles: ['client'] },
+  { href: '/profil', label: 'Mon profil', icon: User, roles: ['client'] },
+  { href: '/appointments', label: 'Rendez-vous', icon: ListTodo, roles: ['admin', 'secretaire', 'medecin'] },
   { href: '/risk-center', label: 'Centre de risque', icon: AlertTriangle, roles: ['admin', 'secretaire'], badge: 5 },
   { href: '/waitlist', label: 'Liste d\'attente', icon: Clock, roles: ['admin', 'secretaire'], badge: 4 },
   { href: '/kpi', label: 'Indicateurs KPI', icon: BarChart3, roles: ['admin'] },
@@ -71,6 +77,8 @@ const roleLabels: Record<UserRole, string> = {
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const { currentUser, currentRole, setRole, logout } = useApp()
+  const isClientView = currentRole === 'client'
+  const homeHref = isClientView ? '/agenda' : '/dashboard'
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
 
@@ -90,7 +98,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {/* Mobile overlay */}
       {mobileOpen && (
         <div 
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          className={cn('fixed inset-0 bg-black/50 z-40', !isClientView && 'lg:hidden')}
           onClick={() => setMobileOpen(false)}
         />
       )}
@@ -98,9 +106,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {/* Sidebar */}
       <aside
         className={cn(
-          'fixed lg:relative inset-y-0 left-0 z-50 flex flex-col bg-sidebar border-r border-sidebar-border shadow-sm transition-all duration-300',
-          collapsed ? 'w-[72px]' : 'w-64',
-          mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+          'fixed inset-y-0 left-0 z-50 flex flex-col bg-sidebar border-r border-sidebar-border shadow-sm transition-all duration-300',
+          !isClientView && 'lg:relative',
+          isClientView ? 'w-72 bg-sidebar/95 backdrop-blur-sm' : (collapsed ? 'w-[72px]' : 'w-64'),
+          isClientView
+            ? (mobileOpen ? 'translate-x-0' : '-translate-x-full')
+            : (mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0')
         )}
       >
         {/* Logo */}
@@ -109,7 +120,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           collapsed ? 'justify-center' : 'justify-between'
         )}>
           {!collapsed && (
-            <Link href="/dashboard" className="flex items-center gap-2">
+            <Link href={homeHref} className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
                 <span className="text-primary-foreground font-bold text-sm">M</span>
               </div>
@@ -120,6 +131,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
               <span className="text-primary-foreground font-bold text-sm">M</span>
             </div>
+          )}
+          {isClientView && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="ml-auto"
+              onClick={() => setMobileOpen(false)}
+            >
+              <X className="w-4 h-4" />
+            </Button>
           )}
         </div>
 
@@ -166,20 +187,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </nav>
 
         {/* Collapse button */}
-        <div className="hidden lg:flex px-2 py-3 border-t border-sidebar-border">
-          <Button
-            variant="ghost"
-            size="sm"
-            className={cn(
-              'w-full justify-center text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50',
-              !collapsed && 'justify-start'
-            )}
-            onClick={() => setCollapsed(!collapsed)}
-          >
-            {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-            {!collapsed && <span className="ml-2 text-sm">Réduire</span>}
-          </Button>
-        </div>
+        {!isClientView && (
+          <div className="hidden lg:flex px-2 py-3 border-t border-sidebar-border">
+            <Button
+              variant="ghost"
+              size="sm"
+              className={cn(
+                'w-full justify-center text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50',
+                !collapsed && 'justify-start'
+              )}
+              onClick={() => setCollapsed(!collapsed)}
+            >
+              {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+              {!collapsed && <span className="ml-2 text-sm">Réduire</span>}
+            </Button>
+          </div>
+        )}
       </aside>
 
       {/* Main content */}
@@ -190,8 +213,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Button
               variant="ghost"
               size="icon"
-              className="lg:hidden"
-              onClick={() => setMobileOpen(true)}
+              className={cn(!isClientView && 'lg:hidden')}
+              onClick={() => setMobileOpen((open) => !open)}
             >
               <Menu className="w-5 h-5" />
             </Button>
@@ -199,7 +222,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <div className="relative hidden md:block">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
-                placeholder="Rechercher un patient, un praticien..."
+                placeholder={isClientView ? 'Rechercher un médecin...' : 'Rechercher un patient, un praticien...'}
                 className="w-80 pl-9 bg-secondary/60 border border-border/70"
               />
             </div>
@@ -207,7 +230,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
           <div className="flex items-center gap-3">
             {/* Role switcher (for demo) */}
-            <div className="hidden sm:flex items-center gap-2">
+            <div className={cn('hidden sm:flex items-center gap-2', isClientView && 'hidden')}>
               <span className="text-xs text-muted-foreground">Rôle:</span>
               <Select value={currentRole} onValueChange={(v) => setRole(v as UserRole)}>
                 <SelectTrigger className="w-36 h-8 text-xs bg-secondary border-0">

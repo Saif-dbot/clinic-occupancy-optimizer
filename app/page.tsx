@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useApp } from '@/contexts/app-context'
+import { mockUsers } from '@/lib/mock-data'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -11,14 +12,23 @@ import { FieldGroup, Field } from '@/components/ui/field'
 import { Spinner } from '@/components/ui/spinner'
 import { AlertCircle, ArrowRight } from 'lucide-react'
 import { toast } from 'sonner'
+import type { UserRole } from '@/types'
+
+const getHomePath = (role: UserRole) => (role === 'client' ? '/agenda' : '/dashboard')
 
 export default function LoginPage() {
   const router = useRouter()
-  const { login } = useApp()
+  const { login, isAuthenticated, currentRole } = useApp()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.push(getHomePath(currentRole))
+    }
+  }, [isAuthenticated, currentRole, router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -29,7 +39,8 @@ export default function LoginPage() {
       const success = await login(email, password)
       if (success) {
         toast.success('Connexion réussie')
-        router.push('/dashboard')
+        const userRole = mockUsers.find(u => u.email === email)?.role ?? 'client'
+        router.push(getHomePath(userRole))
       } else {
         setError('Email ou mot de passe incorrect')
       }
@@ -52,7 +63,7 @@ export default function LoginPage() {
     const success = await login(emails[role], 'demo')
     if (success) {
       toast.success('Connexion réussie')
-      router.push('/dashboard')
+      router.push(getHomePath(role))
     }
     setLoading(false)
   }

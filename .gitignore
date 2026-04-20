@@ -19,3 +19,11 @@ node_modules
 *.aux
 *.log
 *.out
+*.toc
+*.nav
+*.snm
+*.vrb
+
+# Python cache artifacts
+__pycache__/
+*.pyc
