@@ -52,7 +52,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="fr" className={`${dmSans.variable} ${jetbrainsMono.variable} bg-background`}>
-      <body className="font-sans antialiased">
+      <body suppressHydrationWarning className="font-sans antialiased">
         <AppProvider>
           {children}
         </AppProvider>

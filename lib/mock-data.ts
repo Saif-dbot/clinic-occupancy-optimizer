@@ -78,6 +78,15 @@ const generateDates = () => {
 
 const dates = generateDates()
 
+const deterministic = (seed: number) => {
+  const x = Math.sin(seed * 12.9898 + 78.233) * 43758.5453
+  return x - Math.floor(x)
+}
+
+const spread = (base: number, amplitude: number, seed: number) => {
+  return base + deterministic(seed) * amplitude
+}
+
 // Appointments
 export const mockAppointments: Appointment[] = [
   {
@@ -381,7 +390,7 @@ export const mockWaitlist: WaitlistEntry[] = [
     createdAt: dates[5] + 'T09:00:00',
     status: 'offered',
     offeredSlotId: 'slot-p1-' + dates[7] + '-09:30',
-    expiresAt: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+    expiresAt: dates[7] + 'T11:30:00',
   },
   {
     id: 'w4',
@@ -398,13 +407,13 @@ export const mockWaitlist: WaitlistEntry[] = [
 // KPI data (last 14 days)
 export const mockKPIData: KPIData[] = dates.slice(0, 14).map((date, idx) => ({
   date,
-  noShowRate: 12 + Math.random() * 15 - (idx * 0.3),
-  occupancyRate: 72 + Math.random() * 18,
-  recoveredSlotsRate: 45 + Math.random() * 25,
-  bookingLeadTime: 3 + Math.random() * 4,
-  reminderDeliveryRate: 92 + Math.random() * 7,
-  highRiskConfirmationRate: 55 + Math.random() * 30,
-  slotRefillTime: 18 + Math.random() * 12,
+  noShowRate: spread(12 - (idx * 0.3), 15, idx + 1),
+  occupancyRate: spread(72, 18, idx + 21),
+  recoveredSlotsRate: spread(45, 25, idx + 41),
+  bookingLeadTime: spread(3, 4, idx + 61),
+  reminderDeliveryRate: spread(92, 7, idx + 81),
+  highRiskConfirmationRate: spread(55, 30, idx + 101),
+  slotRefillTime: spread(18, 12, idx + 121),
 }))
 
 // KPI Alerts
